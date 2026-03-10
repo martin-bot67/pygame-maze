@@ -1,0 +1,16 @@
+{
+  "name": "Pygame in Codespaces",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11-bookworm",
+  "features": {
+    //"ghcr.io/devcontainers/features/desktop-lite:1": {}
+    "ghcr.io/lcas/devcontainer-features/desktop-lite:latest": {}
+  },
+  "forwardPorts": [6080],
+  "portsAttributes": {
+    "6080": {
+      "label": "Desktop (noVNC)",
+      "onAutoForward": "openBrowser"
+    }
+  },
+  "postCreateCommand": "python -m pip install --upgrade pip && pip install -r requirements.txt"
+}
