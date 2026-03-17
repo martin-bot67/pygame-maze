@@ -6,7 +6,7 @@ class Varas(pygame.sprite.Sprite):
         self.image = pygame.image.load("Tegelane_varas.png").convert_alpha()
         self.image = pygame.transform.scale(self.image, (20, 20))
         self.rect = self.image.get_rect(topleft=(x, y))
-        self.kiirus = 10
+        self.kiirus = 20
         self.akna_laius = akna_laius
         self.akna_korgus = akna_korgus
         self.walls = walls
