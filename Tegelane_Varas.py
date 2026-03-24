@@ -16,14 +16,15 @@ class Varas(pygame.sprite.Sprite):
         dx = dy = 0
 
         # Liikumine klahvide järgi
-        if keys[pygame.K_a]:
+        if keys[pygame.K_a] or keys[pygame.K_LEFT]:
             dx = -self.kiirus
-        if keys[pygame.K_d]:
+        if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
             dx = self.kiirus
-        if keys[pygame.K_w]:
+        if keys[pygame.K_w] or keys[pygame.K_UP]:
             dy = -self.kiirus
-        if keys[pygame.K_s]:
+        if keys[pygame.K_s] or keys[pygame.K_DOWN]:
             dy = self.kiirus
+        
 
         # Esmalt liiguta horisontaalselt ja kontrolli kollisiooni
         self.rect.x += dx

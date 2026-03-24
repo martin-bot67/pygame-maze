@@ -3,6 +3,7 @@ import pygame
 import Tegelane_Varas
 import random
 import time
+from coin import Coin
 
 # See rida on vajalik, et pilves ei tekiks helivigu
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
@@ -19,14 +20,6 @@ taustapilt = pygame.image.load("egypt_pixel.png")
 
 TILE_SIZE = 40  # iga ruudu suurus
 tiles = [0, 1, 2, 4]  # added 4 for start tile (yellow)
-
-# Coin class
-class Coin(pygame.sprite.Sprite):
-    def __init__(self, x, y):
-        super().__init__()
-        self.image = pygame.image.load("Coin.png").convert_alpha()
-        self.image = pygame.transform.scale(self.image, (TILE_SIZE, TILE_SIZE))
-        self.rect = self.image.get_rect(topleft=(x, y))
 
 def generate_random_maze(width, height):
     """Generate a random maze using recursive backtracking."""
@@ -129,7 +122,7 @@ for row_idx, row in enumerate(maze):
 # Create coin sprites
 coins = pygame.sprite.Group()
 for x, y in coin_positions:
-    coins.add(Coin(x, y))
+    coins.add(Coin(x, y, TILE_SIZE))
 
 # Coin counter
 coins_collected = 0
@@ -137,16 +130,22 @@ total_coins = len(coin_positions)
 # Level counter
 level = 1
 font = pygame.font.Font(None, 36)
+font_large = pygame.font.Font(None, 72)
 font_small = pygame.font.Font(None, 24)
 
 # Track coins for each level and total
 level_coins = {}
 total_coins_collected = 0
 time_out_triggered = False
-death_time = None
+game_over = False
+intro = True
 
 # Time limit in seconds
 TIME_LIMIT = 20  # aeg ehk time counter
+
+# Buttons
+restart_button = pygame.Rect(laius // 2 - 100, kõrgus // 2 + 60, 200, 50)
+start_button = pygame.Rect(laius // 2 - 100, kõrgus // 2 + 60, 200, 50)
 
 # Tegelase asukoht
 if start_rect:
@@ -159,8 +158,45 @@ tegelane_varvas = Tegelane_Varas.Varas(x_asukoht, y_asukoht, laius, kõrgus, wal
 peategelane = pygame.sprite.Group()
 peategelane.add(tegelane_varvas)
 
+def setup_new_maze():
+    global maze, coin_positions, total_coins, walls, start_rect, goal_rect, coins, coins_collected, start_time
+
+    maze, coin_positions = generate_random_maze(32, 18)
+    total_coins = len(coin_positions)
+    walls = []
+    start_rect = None
+    goal_rect = None
+    for row_idx, row in enumerate(maze):
+        for col_idx, tile in enumerate(row):
+            if tile == 1:
+                walls.append(pygame.Rect(col_idx * TILE_SIZE, row_idx * TILE_SIZE, TILE_SIZE, TILE_SIZE))
+            elif tile == 2:
+                goal_rect = pygame.Rect(col_idx * TILE_SIZE, row_idx * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+            elif tile == 4:
+                start_rect = pygame.Rect(col_idx * TILE_SIZE, row_idx * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+    tegelane_varvas.walls = walls
+    if start_rect:
+        tegelane_varvas.rect.topleft = start_rect.topleft
+    coins = pygame.sprite.Group()
+    for x, y in coin_positions:
+        coins.add(Coin(x, y, TILE_SIZE))
+    coins_collected = 0
+    start_time = time.time()
+
+
+def reset_game():
+    global level, total_coins_collected, level_coins, time_out_triggered, game_over
+
+    level = 1
+    total_coins_collected = 0
+    level_coins = {}
+    time_out_triggered = False
+    game_over = False
+    setup_new_maze()
+
+
 # Game timer
-start_time = time.time()
+start_time = None
 
 # Peatsükl
 tootab = True
@@ -169,7 +205,45 @@ while tootab:
         if event.type == pygame.QUIT:
             tootab = False
 
-    peategelane.update()
+        if intro and event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if start_button.collidepoint(event.pos):
+                intro = False
+                game_over = False
+                start_time = time.time()
+
+        if intro and event.type == pygame.KEYDOWN and event.key in (pygame.K_RETURN, pygame.K_SPACE):
+            intro = False
+            game_over = False
+            start_time = time.time()
+
+        if game_over and event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if restart_button.collidepoint(event.pos):
+                reset_game()
+
+        if game_over and event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
+            reset_game()
+
+    if not intro and not game_over:
+        peategelane.update()
+
+    # Intro screen: show instructions and start button
+    if intro:
+        aken.fill((0, 0, 0))
+        game_name_text = font_large.render("Labyrint", True, (255, 127, 80))
+        game_name_rect = game_name_text.get_rect(center=(laius // 2, kõrgus // 2 - 130))
+        aken.blit(game_name_text, game_name_rect)
+
+        title = font.render("How to move: W, A, S, D", True, (255, 255, 255))
+        title_rect = title.get_rect(center=(laius // 2, kõrgus // 2 - 40))
+        aken.blit(title, title_rect)
+
+        pygame.draw.rect(aken, (255, 255, 255), start_button)
+        start_text = font.render("Start", True, (0, 0, 0))
+        start_text_rect = start_text.get_rect(center=start_button.center)
+        aken.blit(start_text, start_text_rect)
+
+        pygame.display.flip()
+        continue
 
     # Calculate time left
     elapsed_time = time.time() - start_time
@@ -178,36 +252,14 @@ while tootab:
     # Check if time is up
     if time_left == 0 and not time_out_triggered:
         if coins_collected < total_coins:
-            # Deduct 7 coins and advance to next level
             level_coins[level] = -7
             total_coins_collected -= 7
         elif coins_collected == total_coins:
-            # Deduct 5 coins and advance to next level
             level_coins[level] = -5
             total_coins_collected -= 5
         level += 1
         time_out_triggered = True
-        maze, coin_positions = generate_random_maze(32, 18)
-        total_coins = len(coin_positions)
-        walls = []
-        start_rect = None
-        goal_rect = None
-        for row_idx, row in enumerate(maze):
-            for col_idx, tile in enumerate(row):
-                if tile == 1:
-                    walls.append(pygame.Rect(col_idx * TILE_SIZE, row_idx * TILE_SIZE, TILE_SIZE, TILE_SIZE))
-                elif tile == 2:
-                    goal_rect = pygame.Rect(col_idx * TILE_SIZE, row_idx * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-                elif tile == 4:
-                    start_rect = pygame.Rect(col_idx * TILE_SIZE, row_idx * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-        tegelane_varvas.walls = walls
-        if start_rect:
-            tegelane_varvas.rect.topleft = start_rect.topleft
-        coins = pygame.sprite.Group()
-        for x, y in coin_positions:
-            coins.add(Coin(x, y))
-        coins_collected = 0
-        start_time = time.time()
+        setup_new_maze()
         time_out_triggered = False
 
     # Check for coin collisions
@@ -216,83 +268,36 @@ while tootab:
 
     # Check for goal collision (only if all coins collected and time remains)
     if tegelane_varvas.rect.colliderect(goal_rect) and coins_collected == total_coins and time_left > 0:
-        # Record coins for this level and add to total
         level_coins[level] = coins_collected
         total_coins_collected += coins_collected
         time_out_triggered = False
-        # Advance to next level
         level += 1
-        maze, coin_positions = generate_random_maze(32, 18)
-        total_coins = len(coin_positions)
-        walls = []
-        start_rect = None
-        goal_rect = None
-        for row_idx, row in enumerate(maze):
-            for col_idx, tile in enumerate(row):
-                if tile == 1:
-                    walls.append(pygame.Rect(col_idx * TILE_SIZE, row_idx * TILE_SIZE, TILE_SIZE, TILE_SIZE))
-                elif tile == 2:
-                    goal_rect = pygame.Rect(col_idx * TILE_SIZE, row_idx * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-                elif tile == 4:
-                    start_rect = pygame.Rect(col_idx * TILE_SIZE, row_idx * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-        tegelane_varvas.walls = walls
-        if start_rect:
-            tegelane_varvas.rect.topleft = start_rect.topleft
-        coins = pygame.sprite.Group()
-        for x, y in coin_positions:
-            coins.add(Coin(x, y))
-        coins_collected = 0
-        start_time = time.time()
+        setup_new_maze()
 
     # Joonista taust ja maze
     
     # Check if player died (coins <= -10)
     if total_coins_collected <= -10:
-        if death_time is None:
-            death_time = time.time()
-        
+        game_over = True
+
         # Draw black screen
         black_screen = pygame.Surface((laius, kõrgus))
         black_screen.fill((0, 0, 0))
         aken.blit(black_screen, (0, 0))
-        
-        # Display "You died" text
+
+        # Display "Game Over" text
         death_font = pygame.font.Font(None, 72)
-        death_text = death_font.render("You Died", True, (255, 0, 0))
-        text_rect = death_text.get_rect(center=(laius // 2, kõrgus // 2))
+        death_text = death_font.render("Game Over", True, (255, 0, 0))
+        text_rect = death_text.get_rect(center=(laius // 2, kõrgus // 2 - 50))
         aken.blit(death_text, text_rect)
-        
+
+        # Draw "Start Again" button
+        pygame.draw.rect(aken, (255, 255, 255), restart_button)
+        button_text = font.render("Play again", True, (0, 0, 0))
+        button_text_rect = button_text.get_rect(center=restart_button.center)
+        aken.blit(button_text, button_text_rect)
+
         pygame.display.flip()
-        
-        # Check if 7 seconds have passed
-        if time.time() - death_time >= 7:
-            # Reset game
-            level = 1
-            total_coins_collected = 0
-            level_coins = {}
-            time_out_triggered = False
-            death_time = None
-            maze, coin_positions = generate_random_maze(32, 18)
-            total_coins = len(coin_positions)
-            walls = []
-            start_rect = None
-            goal_rect = None
-            for row_idx, row in enumerate(maze):
-                for col_idx, tile in enumerate(row):
-                    if tile == 1:
-                        walls.append(pygame.Rect(col_idx * TILE_SIZE, row_idx * TILE_SIZE, TILE_SIZE, TILE_SIZE))
-                    elif tile == 2:
-                        goal_rect = pygame.Rect(col_idx * TILE_SIZE, row_idx * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-                    elif tile == 4:
-                        start_rect = pygame.Rect(col_idx * TILE_SIZE, row_idx * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-            tegelane_varvas.walls = walls
-            if start_rect:
-                tegelane_varvas.rect.topleft = start_rect.topleft
-            coins = pygame.sprite.Group()
-            for x, y in coin_positions:
-                coins.add(Coin(x, y))
-            coins_collected = 0
-            start_time = time.time()
     else:
         # Normal game rendering
         aken.blit(taustapilt, (0, 0))
