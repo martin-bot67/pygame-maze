@@ -8,6 +8,11 @@ from coin import Coin
 # See rida on vajalik, et pilves ei tekiks helivigu
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+def asset_path(filename):
+    return os.path.join(BASE_DIR, filename)
+
 pygame.init()
 
 #ekraani suurus
@@ -16,7 +21,7 @@ kõrgus = 720
 
 aken = pygame.display.set_mode((laius, kõrgus))
 pygame.display.set_caption("Labürindi mäng")
-taustapilt = pygame.image.load("egypt_pixel.png")
+taustapilt = pygame.image.load(asset_path("egypt_pixel.png"))
 
 TILE_SIZE = 40  # iga ruudu suurus
 tiles = [0, 1, 2, 4]  # added 4 for start tile (yellow)
@@ -122,7 +127,7 @@ for row_idx, row in enumerate(maze):
 # Create coin sprites
 coins = pygame.sprite.Group()
 for x, y in coin_positions:
-    coins.add(Coin(x, y, TILE_SIZE))
+    coins.add(Coin(x, y, TILE_SIZE, BASE_DIR))
 
 # Coin counter
 coins_collected = 0
@@ -154,7 +159,7 @@ else:
     x_asukoht, y_asukoht = 70, 130
 
 # Loo tegelane koos seinadega
-tegelane_varvas = Tegelane_Varas.Varas(x_asukoht, y_asukoht, laius, kõrgus, walls)
+tegelane_varvas = Tegelane_Varas.Varas(x_asukoht, y_asukoht, laius, kõrgus, walls, BASE_DIR)
 peategelane = pygame.sprite.Group()
 peategelane.add(tegelane_varvas)
 
@@ -179,7 +184,7 @@ def setup_new_maze():
         tegelane_varvas.rect.topleft = start_rect.topleft
     coins = pygame.sprite.Group()
     for x, y in coin_positions:
-        coins.add(Coin(x, y, TILE_SIZE))
+        coins.add(Coin(x, y, TILE_SIZE, BASE_DIR))
     coins_collected = 0
     start_time = time.time()
 

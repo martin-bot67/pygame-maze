@@ -1,12 +1,17 @@
+import os
 import pygame
 
 class Varas(pygame.sprite.Sprite):
-    def __init__(self, x, y, akna_laius, akna_korgus, walls):
+    def __init__(self, x, y, akna_laius, akna_korgus, walls, asset_dir=None):
         super().__init__()
-        self.image = pygame.image.load("Tegelane_varas.png").convert_alpha()
+        if asset_dir:
+            image_path = os.path.join(asset_dir, "Tegelane_varas.png")
+        else:
+            image_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Tegelane_varas.png")
+        self.image = pygame.image.load(image_path).convert_alpha()
         self.image = pygame.transform.scale(self.image, (20, 20))
         self.rect = self.image.get_rect(topleft=(x, y))
-        self.kiirus = 20
+        self.kiirus = 15
         self.akna_laius = akna_laius
         self.akna_korgus = akna_korgus
         self.walls = walls
